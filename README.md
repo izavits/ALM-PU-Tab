@@ -27,3 +27,8 @@ This runs every dataset in `dataset/` under SCAR and SAR labeling, hiding 25%, 5
 ## Datasets
 
 The 14 datasets in `dataset/` are headerless, standardized CSV files with a binary label in the last column; 1 is the positive (minority) class. The original sources are given in the paper.
+
+## Reference
+This is based on the following work and cloned/modified from the respective code repo:
+
+Wei, J., Wu, Y., Shi, B. et al. ALM-PU: positive and unlabeled learning with constrained optimization. Mach Learn 114, 210 (2025). https://doi.org/10.1007/s10994-025-06849-3
