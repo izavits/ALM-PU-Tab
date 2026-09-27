@@ -6,10 +6,10 @@ ALM-PU applied to tabular PU benchmarks with a small MLP. It is evaluated in sev
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install torch numpy pandas scikit-learn jenkspy
+.venv/bin/pip install -r requirements.txt
 ```
 
-The code runs on CPU and uses a GPU automatically if one is available.
+Versions are pinned to those used for the reported results (Python 3.14). The code runs on CPU and uses a GPU automatically if one is available.
 
 ## Running the benchmark
 
@@ -26,7 +26,7 @@ This runs every dataset in `dataset/` under SCAR and SAR labeling, hiding 25%, 5
 
 ## Datasets
 
-The 14 datasets in `dataset/` are headerless, standardized CSV files with a binary label in the last column; 1 is the positive (minority) class. The original sources are given in the paper.
+The 14 datasets in `dataset/` are headerless, standardized CSV files with a binary label in the last column; 1 is the positive (minority) class.
 
 ## Reference
 This is based on the following work and cloned/modified from the respective code repo:
