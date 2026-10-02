@@ -3,7 +3,8 @@
 the training positives, and validate_sarem's metrics on P(positive).
 
 Results are written one per setting:
-    {out}/{EXPERIMENT}_{MECHANISM}_{PU_RATIO}_default_ALMPU/results.csv   (run,dataset,pu_ratio,labeling_mechanism,roc_auc,ap,f1)
+    {out}/{EXPERIMENT}_{MECHANISM}_{PU_RATIO}_default_ALMPU/results.csv   (run,dataset,pu_ratio,labeling_mechanism,roc_auc,ap,f1,f1_pos,f1_neg,f1_macro,
+                                                                             f1_pos_prior,f1_neg_prior,f1_macro_prior)
     {out}/{EXPERIMENT}_{MECHANISM}_{PU_RATIO}_default_ALMPU/runs_detail.csv (+ other metrics, pseudo-label diagnostics)
 and, when --baseline-dir exists, compared per setting against another method's results.
 """
@@ -20,7 +21,7 @@ import pandas as pd
 import torch
 
 import tabular
-from pu_setting import prepare_pu_data_plain, validate_scores
+from pu_setting import f1_at_prior_threshold, prepare_pu_data_plain, validate_scores
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,11 @@ EXPERIMENT_NAMES = {
     'scaled_winequality-red-4': 'SCALED_WINEQUALITY',
 }
 SCORES = ['roc_auc', 'ap', 'f1']
+# F1 at the 0.5 threshold; written to results.csv but not part of the LBE comparison (pu_learning lacks them)
+THRESHOLD_F1S = ['f1_pos', 'f1_neg', 'f1_macro']
+# F1 when the top `prior` fraction of test scores is predicted positive (prior = positive fraction of the
+# training split, as in pu_learning's main_2step_ad.py); also not part of the LBE comparison
+PRIOR_F1S = ['f1_pos_prior', 'f1_neg_prior', 'f1_macro_prior']
 
 
 def parse_args():
@@ -71,7 +77,7 @@ def run_setting(args, path, mech, ratio):
     experiment = experiment_name(path)
     rows = []
     for i in range(args.runs):
-        x_train, y_, x_test, y_test, _, y_train = prepare_pu_data_plain(path, ratio, mech, random_state=i)
+        x_train, y_, x_test, y_test, prior, y_train = prepare_pu_data_plain(path, ratio, mech, random_state=i)
         labeled = y_.ravel() == 1
         # tabular.py uses positive = 0; pu_learning uses positive = 1
         to_repo = lambda y: np.where(y.ravel() == 1, 0, 1)
@@ -83,13 +89,15 @@ def run_setting(args, path, mech, ratio):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             metrics = validate_scores(y_test.astype(int), score_pos)
+            prior_f1s = f1_at_prior_threshold(y_test.astype(int).ravel(), score_pos, prior)
         rows.append({'run': i, 'dataset': experiment, 'pu_ratio': ratio, 'labeling_mechanism': mech,
-                     **metrics, **info, **pl_stats})
+                     **metrics, **dict(zip(PRIOR_F1S, prior_f1s[:3])),
+                     'prior': float(prior), 'prior_threshold': float(prior_f1s[3]), **info, **pl_stats})
 
     out_dir = setting_dir(args.out, experiment, mech, ratio, 'ALMPU')
     os.makedirs(out_dir, exist_ok=True)
     df = pd.DataFrame(rows)
-    df[['run', 'dataset', 'pu_ratio', 'labeling_mechanism'] + SCORES].to_csv(
+    df[['run', 'dataset', 'pu_ratio', 'labeling_mechanism'] + SCORES + THRESHOLD_F1S + PRIOR_F1S].to_csv(
         os.path.join(out_dir, 'results.csv'), index=False)
     df.to_csv(os.path.join(out_dir, 'runs_detail.csv'), index=False)
     return experiment, mech, ratio, df

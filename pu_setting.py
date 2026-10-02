@@ -5,8 +5,8 @@ import math
 
 import numpy as np
 from pandas import read_csv
-from sklearn.metrics import (accuracy_score, average_precision_score, pairwise_distances, precision_recall_curve,
-                             precision_score, recall_score, roc_auc_score)
+from sklearn.metrics import (accuracy_score, average_precision_score, f1_score, pairwise_distances,
+                             precision_recall_curve, precision_score, recall_score, roc_auc_score)
 from sklearn.model_selection import train_test_split
 from sklearn.utils import check_random_state
 from sklearn.utils.validation import check_consistent_length
@@ -83,6 +83,21 @@ def r_precision_at_n(y_pred_proba, y_test):
     return precision
 
 
+def f1_per_class(y_true, predictions):
+    """F1 for the positive class, the negative class and their macro average (pu_learning's f1_per_class)."""
+    f1_neg, f1_pos = f1_score(y_true, predictions, labels=[0, 1], average=None, zero_division=0)
+    f1_macro = (f1_pos + f1_neg) / 2
+    return f1_pos, f1_neg, f1_macro
+
+
+def f1_at_prior_threshold(y_true, scores, prior):
+    """pu_learning's f1_at_prior_threshold: the top `prior` fraction of the test scores is predicted positive,
+    i.e. the threshold is their (1 - prior) quantile. Returns f1_pos, f1_neg, f1_macro, threshold."""
+    threshold = np.quantile(scores, 1 - prior)
+    f1_pos, f1_neg, f1_macro = f1_per_class(y_true, (np.asarray(scores) >= threshold).astype(int))
+    return f1_pos, f1_neg, f1_macro, threshold
+
+
 def validate_scores(y_test, pred_proba):
     predictions = [y_hat.round() for y_hat in pred_proba]
     acc = accuracy_score(y_test, predictions)
@@ -96,5 +111,10 @@ def validate_scores(y_test, pred_proba):
     denom = r + p
     f1_scores = np.divide(numerator, denom, out=np.zeros_like(denom), where=(denom != 0))
     best_f1 = np.max(f1_scores)
+    # F1 at the same 0.5 threshold as acc/precision/recall (not part of validate_sarem)
+    f1_pos = f1_score(y_test, predictions, pos_label=1, zero_division=0)
+    f1_neg = f1_score(y_test, predictions, pos_label=0, zero_division=0)
+    f1_macro = f1_score(y_test, predictions, average='macro', zero_division=0)
     return {'acc': acc, 'roc_auc': area, 'rprecision': rprecision, 'precision': precision,
-            'recall': recall, 'ap': pr_area, 'f1': best_f1}
+            'recall': recall, 'ap': pr_area, 'f1': best_f1,
+            'f1_pos': f1_pos, 'f1_neg': f1_neg, 'f1_macro': f1_macro}

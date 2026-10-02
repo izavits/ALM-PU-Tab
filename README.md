@@ -20,10 +20,6 @@ Versions are pinned to those used for the reported results (Python 3.14). The co
 This runs every dataset in `dataset/` under SCAR and SAR labeling, hiding 25%, 50% and 75% of the training positives, with 10 runs per setting (run *i* uses split `random_state=i`). Settings that already have results are skipped; use `--overwrite` to rerun them.
 
 
-## Output
-
-- `output_ALMPU/<DATASET>_<MECHANISM>_<RATIO>_default_ALMPU/results.csv` holds ROC-AUC, average precision and best F1 per run.
-
 ## Datasets
 
 The 14 datasets in `dataset/` are headerless, standardized CSV files with a binary label in the last column; 1 is the positive (minority) class.
